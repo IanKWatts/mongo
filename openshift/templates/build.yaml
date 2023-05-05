@@ -1,0 +1,82 @@
+# Copyright 2021 The Province of British Columbia
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+---
+apiVersion: v1
+kind: Template
+metadata:
+  name: mongodb-image
+labels:
+  app: mongodb-image
+  phase: build
+parameters:
+  - name: VERSION
+    description: Ouput version
+    value: "1"
+  - name: GIT_URI
+    value: "https://github.com/bcgov/mongodb-replicaset-container.git"
+  - name: GIT_REF
+    value: "4.4"
+objects:
+  - apiVersion: v1
+    kind: ImageStream
+    metadata:
+      name: mongodb-44-ha
+    spec:
+      lookupPolicy:
+        local: false
+  - apiVersion: v1
+    kind: BuildConfig
+    metadata:
+      name: mongodb-44-ha
+    spec:
+      resources:
+        limits:
+          cpu: '2'
+          memory: 2G
+        requests:
+          cpu: '1'
+          memory: 1G
+      output:
+        to:
+          kind: ImageStreamTag
+          name: "mongodb-44-ha:${VERSION}"
+      source:
+        secrets:
+        - secret:
+            name: etc-pki-entitlement
+          destinationDir: etc-pki-entitlement
+        configMaps:
+        - configMap:
+            name: rhsm-conf
+          destinationDir: rhsm-conf
+        - configMap:
+            name: rhsm-ca
+          destinationDir: rhsm-ca
+        contextDir: /
+        git:
+          ref: ${GIT_REF}
+          uri: ${GIT_URI}
+        type: Git
+      strategy:
+        dockerStrategy:
+          imageOptimizationPolicy: SkipLayers
+          from:
+            kind: DockerImage
+            name: registry.access.redhat.com/ubi8/ubi:latest
+        type: Docker
+      triggers:
+        - type: ConfigChange
+        - imageChange: {}
+          type: ImageChange
