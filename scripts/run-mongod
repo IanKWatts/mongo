@@ -133,6 +133,7 @@ run_replica_set_mgmt() {
   mongosh_cmd --host $PRIMARY \
     -u $MONGODB_ADMIN_USERNAME -p $MONGODB_ADMIN_PASSWORD \
     -f /opt/scripts/config_replica_set.js
+  log "Done replica set configuration"
 }
 
 # Run a JS startup script. These scripts are run agains the
@@ -201,7 +202,6 @@ gen_key_file
 
 # Start mongodb on the localhost interface so that the
 # admin password can be set.
-# mongo base image starts mongod automatically
 start_mongod_local
 wait_for_mongo_up
 
@@ -211,20 +211,22 @@ run_scripts_on_startup
 stop_mongod
 wait_for_mongo_down
 
-# Start mongodb on all interfaces with the replica set enabled.
-#log "Starting the server for replication"
+# Start mongodb on all interfaces with the replica set
+# enabled.
+log "Starting the server for replication"
 start_mongod
 wait_for_mongo_up
+
 touch /tmp/initialized
 
 # Pause to allow hostname to get registered in DNS
-sleep 15
+sleep 30
 run_replica_set_mgmt "${FQ_HOST_NAME}"
 
-log "MongoDB initalization complete"
+
+log "mongoDB is initalized and ready for action"
 
 trap 'stop_mongod' SIGINT SIGTERM
 
-# mongo pid is not a child of this shell
-#wait $(pgrep --parent 1 mongod) && echo "Goodbye!"
+wait $(pgrep --parent 1 mongod) && echo "Goodbye!"
 
